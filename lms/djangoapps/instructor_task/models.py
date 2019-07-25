@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 # define custom states used by InstructorTask
 QUEUING = 'QUEUING'
 PROGRESS = 'PROGRESS'
-TASK_INPUT_LENGTH = 1024
+TASK_INPUT_LENGTH = 10000
 
 
 class InstructorTask(models.Model):
