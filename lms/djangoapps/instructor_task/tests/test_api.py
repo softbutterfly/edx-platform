@@ -37,7 +37,7 @@ from lms.djangoapps.instructor_task.api import (
     submit_reset_problem_attempts_in_entrance_exam
 )
 from lms.djangoapps.instructor_task.api_helper import AlreadyRunningError, QueueConnectionError
-from lms.djangoapps.instructor_task.models import PROGRESS, InstructorTask
+from lms.djangoapps.instructor_task.models import PROGRESS, TASK_INPUT_LENGTH, InstructorTask
 from lms.djangoapps.instructor_task.tasks import export_ora2_data
 from lms.djangoapps.instructor_task.tests.test_base import (
     TEST_COURSE_KEY,
@@ -102,6 +102,16 @@ class InstructorTaskModuleSubmitTest(InstructorTaskModuleTestCase):
         self.student = UserFactory.create(username="student", email="student@edx.org")
         self.instructor = UserFactory.create(username="instructor", email="instructor@edx.org")
 
+    def _test_submit_with_long_url(self, task_function, student=None):
+        problem_url_name = 'x' * TASK_INPUT_LENGTH
+        self.define_option_problem(problem_url_name)
+        location = InstructorTaskModuleTestCase.problem_location(problem_url_name)
+        with self.assertRaises(ValueError):
+            if student is not None:
+                task_function(self.create_task_request(self.instructor), location, student)
+            else:
+                task_function(self.create_task_request(self.instructor), location)
+
     def test_submit_nonexistent_modules(self):
         # confirm that a rescore of a non-existent module returns an exception
         problem_url = InstructorTaskModuleTestCase.problem_location("NonexistentProblem")
@@ -125,6 +135,18 @@ class InstructorTaskModuleSubmitTest(InstructorTaskModuleTestCase):
             submit_rescore_problem_for_student(request, problem_url, self.student)
         with self.assertRaises(NotImplementedError):
             submit_rescore_problem_for_all_students(request, problem_url)
+
+    def test_submit_rescore_all_with_long_url(self):
+        self._test_submit_with_long_url(submit_rescore_problem_for_all_students)
+
+    def test_submit_rescore_student_with_long_url(self):
+        self._test_submit_with_long_url(submit_rescore_problem_for_student, self.student)
+
+    def test_submit_reset_all_with_long_url(self):
+        self._test_submit_with_long_url(submit_reset_problem_attempts_for_all_students)
+
+    def test_submit_delete_all_with_long_url(self):
+        self._test_submit_with_long_url(submit_delete_problem_state_for_all_students)
 
     @ddt.data(
         (normalize_repr(submit_rescore_problem_for_all_students), 'rescore_problem'),
